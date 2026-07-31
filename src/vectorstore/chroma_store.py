@@ -20,7 +20,7 @@ class ChromaVectorStore:
         persist_directory: str = CHROMA_DB_PATH,
     ):
 
-        embedding_model = GeminiEmbeddings().get_embedding_model()
+        embedding_model = GeminiEmbeddings().get_model()
 
         self.vectorstore = Chroma(
             persist_directory=persist_directory,
