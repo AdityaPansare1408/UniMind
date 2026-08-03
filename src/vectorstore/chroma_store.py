@@ -2,7 +2,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
 from src.config.settings import CHROMA_DB_PATH
-from src.embeddings.gemini_embeddings import GeminiEmbeddings
+from src.embeddings.local_embeddings import LocalEmbeddings
 
 
 class ChromaVectorStore:
@@ -20,7 +20,7 @@ class ChromaVectorStore:
         persist_directory: str = CHROMA_DB_PATH,
     ):
 
-        embedding_model = GeminiEmbeddings().get_model()
+        embedding_model = LocalEmbeddings().get_model()
 
         self.vectorstore = Chroma(
             persist_directory=persist_directory,
@@ -59,7 +59,7 @@ class ChromaVectorStore:
 
         self.vectorstore.delete_collection()
 
-        embedding_model = GeminiEmbeddings().get_embedding_model()
+        embedding_model = LocalEmbeddings().get_model()
 
         self.vectorstore = Chroma(
             persist_directory=CHROMA_DB_PATH,

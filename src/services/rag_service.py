@@ -20,20 +20,39 @@ class RAGService:
         documents: list[Document],
     ) -> str:
         """
-        Combine retrieved document chunks into a formatted context string.
+        Build a rich context for the LLM including
+        source filename and page number.
         """
 
         context_parts = []
 
         for index, document in enumerate(documents, start=1):
+
+            metadata = document.metadata or {}
+
+            source = metadata.get("source", "Unknown")
+
+            # Keep only filename
+            source = source.split("\\")[-1].split("/")[-1]
+
+            page = metadata.get("page")
+
+            if page is not None:
+                page += 1  # LangChain pages start from 0
+
             context_parts.append(
-                f"""Document {index}
+                f"""
+Document {index}
+Source: {source}
+Page: {page if page is not None else "Unknown"}
+
 --------------------
 {document.page_content}
+--------------------
 """
             )
 
-        return "\n\n".join(context_parts)
+        return "\n".join(context_parts)
 
     def build_prompt(
         self,
@@ -41,7 +60,7 @@ class RAGService:
         context: str,
     ) -> str:
         """
-        Build the final prompt for the language model.
+        Build final prompt.
         """
 
         return RAG_PROMPT.format(
