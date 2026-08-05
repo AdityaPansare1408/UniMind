@@ -12,6 +12,7 @@ class ChromaVectorStore:
     Handles:
     - storing document embeddings
     - similarity search
+    - deleting document embeddings
     - resetting the database
     """
 
@@ -49,6 +50,20 @@ class ChromaVectorStore:
         return self.vectorstore.similarity_search(
             query=query,
             k=k,
+        )
+
+    def delete_document(
+        self,
+        document_id: str,
+    ) -> None:
+        """
+        Delete every chunk belonging to a document.
+        """
+
+        self.vectorstore._collection.delete(
+            where={
+                "document_id": document_id,
+            }
         )
 
     def reset(self) -> None:

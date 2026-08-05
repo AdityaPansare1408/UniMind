@@ -7,7 +7,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(ROOT))
 
 from src.services.document_service import DocumentService
+from src.services.document_registry import DocumentRegistry
 from src.services.rag_service import RAGService
+from src.ui.document_card import render_document_card
 
 # --------------------------------------------------
 # Page Configuration
@@ -19,8 +21,24 @@ st.set_page_config(
     layout="wide",
 )
 
-rag = RAGService()
-document_service = DocumentService()
+@st.cache_resource
+def get_rag_service():
+    return RAGService()
+
+
+@st.cache_resource
+def get_document_service():
+    return DocumentService()
+
+
+@st.cache_resource
+def get_registry():
+    return DocumentRegistry()
+
+
+rag = get_rag_service()
+document_service = get_document_service()
+registry = get_registry()
 
 # --------------------------------------------------
 # Header
@@ -51,9 +69,13 @@ with st.sidebar:
 
             with st.spinner("Indexing document..."):
 
-                pdf_path = document_service.save_uploaded_file(uploaded_file)
+                pdf_path = document_service.save_uploaded_file(
+                    uploaded_file
+                )
 
-                chunks = document_service.index_pdf(pdf_path)
+                chunks = document_service.index_pdf(
+                    pdf_path
+                )
 
             st.success("✅ Document indexed successfully!")
 
@@ -69,19 +91,41 @@ with st.sidebar:
 
     st.divider()
 
-    st.subheader("Indexed PDFs")
+    # --------------------------------------------------
+    # Indexed Documents
+    # --------------------------------------------------
 
-    pdfs = document_service.list_documents()
+    st.subheader("Indexed Documents")
 
-    if pdfs:
+    documents = registry.get_all()
 
-        for pdf in pdfs:
+    if documents:
 
-            st.markdown(f"📄 {pdf.name}")
+        for document in documents:
+
+            if render_document_card(document):
+
+                deleted = document_service.delete_document(
+                    document.document_id
+                )
+
+                if deleted:
+
+                    st.success(
+                        f"✅ '{document.filename}' deleted successfully."
+                    )
+
+                    st.rerun()
+
+                else:
+
+                    st.error(
+                        "Failed to delete the document."
+                    )
 
     else:
 
-        st.info("No PDFs indexed yet.")
+        st.info("No documents indexed yet.")
 
 # --------------------------------------------------
 # Question
@@ -93,24 +137,25 @@ question = st.text_input(
 
 if st.button(
     "Ask",
-    use_container_width=False,
 ):
 
     if question.strip():
 
-        with st.spinner("Searching documents..."):
+        with st.spinner(
+            "Searching documents..."
+        ):
 
             response = rag.ask(question)
 
-        # ------------------------------------------
+        # --------------------------------------------------
 
         st.subheader("Answer")
 
         st.markdown(response.answer)
 
-        # ------------------------------------------
+        # --------------------------------------------------
         # Sources
-        # ------------------------------------------
+        # --------------------------------------------------
 
         st.subheader("📚 Sources Used")
 
@@ -120,9 +165,12 @@ if st.button(
 
             metadata = doc.metadata or {}
 
-            source = metadata.get("source", "Unknown")
-
-            source = Path(source).name
+            source = Path(
+                metadata.get(
+                    "source",
+                    "Unknown",
+                )
+            ).name
 
             page = metadata.get("page")
 
@@ -140,22 +188,30 @@ if st.button(
                 f"- **{source}** (Page {page})"
             )
 
-        # ------------------------------------------
+        # --------------------------------------------------
         # Debug
-        # ------------------------------------------
+        # --------------------------------------------------
 
-        with st.expander("🔍 Show Retrieved Chunks (Debug)"):
+        with st.expander(
+            "🔍 Show Retrieved Chunks (Debug)"
+        ):
 
             st.write(
                 f"Chunks Retrieved: {len(response.documents)}"
             )
 
-            for index, doc in enumerate(response.documents, start=1):
+            for index, doc in enumerate(
+                response.documents,
+                start=1,
+            ):
 
                 metadata = doc.metadata or {}
 
                 source = Path(
-                    metadata.get("source", "Unknown")
+                    metadata.get(
+                        "source",
+                        "Unknown",
+                    )
                 ).name
 
                 page = metadata.get("page")
@@ -164,18 +220,32 @@ if st.button(
                     page += 1
 
                 st.markdown(
-                    f"### Chunk {index}"
+                    f"## Chunk {index}"
                 )
 
                 st.markdown(
-                    f"**Source:** {source}"
+                    f"**Document ID:** `{metadata.get('document_id', 'N/A')}`"
                 )
 
                 st.markdown(
-                    f"**Page:** {page}"
+                    f"**Filename:** `{metadata.get('filename', 'N/A')}`"
+                )
+
+                st.markdown(
+                    f"**Source:** `{source}`"
+                )
+
+                st.markdown(
+                    f"**Page:** `{page}`"
+                )
+
+                st.markdown(
+                    f"**Chunk Length:** `{len(doc.page_content)} characters`"
                 )
 
                 st.code(
                     doc.page_content,
                     language="text",
                 )
+
+                st.divider()
