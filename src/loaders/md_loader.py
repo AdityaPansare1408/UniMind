@@ -1,24 +1,18 @@
 from pathlib import Path
 
-from docx import Document
-
 from langchain_core.documents import Document as LangChainDocument
 
 from src.loaders.base_loader import BaseLoader
 
 
-class DOCXLoader(BaseLoader):
+class MarkdownLoader(BaseLoader):
     """
-    Loads Microsoft Word (.docx) documents.
+    Loads Markdown (.md) documents.
     """
 
     def load(self, file_path: Path):
-        doc = Document(file_path)
-
-        text = "\n".join(
-            paragraph.text
-            for paragraph in doc.paragraphs
-            if paragraph.text.strip()
+        text = file_path.read_text(
+            encoding="utf-8"
         )
 
         return [
@@ -27,6 +21,7 @@ class DOCXLoader(BaseLoader):
                 metadata={
                     "source": file_path.name,
                     "page": 1,
+                    "file_type": "md",
                 },
             )
         ]

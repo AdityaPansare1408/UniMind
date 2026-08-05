@@ -16,10 +16,11 @@ from src.ui.document_card import render_document_card
 # --------------------------------------------------
 
 st.set_page_config(
-    page_title="UniMind",
+    page_title="🧠 UniMind",
     page_icon="🧠",
     layout="wide",
 )
+
 
 @st.cache_resource
 def get_rag_service():
@@ -56,8 +57,15 @@ with st.sidebar:
     st.header("📄 Documents")
 
     uploaded_file = st.file_uploader(
-        "Upload PDF",
-        type=["pdf"],
+        "Upload Document",
+        type=[
+            "pdf",
+            "docx",
+            "txt",
+            "md",
+            "csv",
+            "pptx",
+        ],
     )
 
     if uploaded_file:
@@ -69,12 +77,12 @@ with st.sidebar:
 
             with st.spinner("Indexing document..."):
 
-                pdf_path = document_service.save_uploaded_file(
+                file_path = document_service.save_uploaded_file(
                     uploaded_file
                 )
 
-                chunks = document_service.index_pdf(
-                    pdf_path
+                chunks = document_service.index_document(
+                    file_path
                 )
 
             st.success("✅ Document indexed successfully!")
@@ -135,19 +143,13 @@ question = st.text_input(
     "Enter your question"
 )
 
-if st.button(
-    "Ask",
-):
+if st.button("Ask"):
 
     if question.strip():
 
-        with st.spinner(
-            "Searching documents..."
-        ):
+        with st.spinner("Searching documents..."):
 
             response = rag.ask(question)
-
-        # --------------------------------------------------
 
         st.subheader("Answer")
 
@@ -192,9 +194,7 @@ if st.button(
         # Debug
         # --------------------------------------------------
 
-        with st.expander(
-            "🔍 Show Retrieved Chunks (Debug)"
-        ):
+        with st.expander("🔍 Show Retrieved Chunks (Debug)"):
 
             st.write(
                 f"Chunks Retrieved: {len(response.documents)}"
@@ -219,9 +219,7 @@ if st.button(
                 if page is not None:
                     page += 1
 
-                st.markdown(
-                    f"## Chunk {index}"
-                )
+                st.markdown(f"## Chunk {index}")
 
                 st.markdown(
                     f"**Document ID:** `{metadata.get('document_id', 'N/A')}`"

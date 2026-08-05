@@ -1,7 +1,7 @@
 from pathlib import Path
 from datetime import datetime
 
-from src.loaders.pdf_loader import PDFLoader
+from src.loaders.document_loader import DocumentLoaderFactory
 from src.models.document_info import DocumentInfo
 from src.processing.text_splitter import TextChunker
 from src.services.document_registry import DocumentRegistry
@@ -19,7 +19,7 @@ class DocumentService:
         self.raw_dir = Path("data/raw")
         self.raw_dir.mkdir(parents=True, exist_ok=True)
 
-        self.loader = PDFLoader()
+        self.loader_factory = DocumentLoaderFactory()
         self.chunker = TextChunker()
         self.vectorstore = ChromaVectorStore()
         self.registry = DocumentRegistry()
@@ -41,15 +41,17 @@ class DocumentService:
     # Index
     # --------------------------------------------------
 
-    def index_pdf(self, pdf_path):
+    def index_document(self, file_path: Path):
 
         document_id = generate_document_id()
 
-        documents = self.loader.load(pdf_path)
+        loader = self.loader_factory.get_loader(file_path)
+
+        documents = loader.load(file_path)
 
         for document in documents:
             document.metadata["document_id"] = document_id
-            document.metadata["filename"] = pdf_path.name
+            document.metadata["filename"] = file_path.name
 
         chunks = self.chunker.split(documents)
 
@@ -57,7 +59,7 @@ class DocumentService:
 
         document_info = DocumentInfo(
             document_id=document_id,
-            filename=pdf_path.name,
+            filename=file_path.name,
             upload_time=datetime.now().isoformat(timespec="seconds"),
             chunk_count=len(chunks),
         )
@@ -94,11 +96,11 @@ class DocumentService:
         # Delete embeddings
         self.vectorstore.delete_document(document_id)
 
-        # Delete PDF
-        pdf_path = self.raw_dir / document.filename
+        # Delete file
+        file_path = self.raw_dir / document.filename
 
-        if pdf_path.exists():
-            pdf_path.unlink()
+        if file_path.exists():
+            file_path.unlink()
 
         # Delete registry entry
         self.registry.delete(document_id)
