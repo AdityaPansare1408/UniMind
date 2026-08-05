@@ -107,6 +107,17 @@ with st.sidebar:
 
     documents = registry.get_all()
 
+    # --------------------------------------------------
+    # Search Scope
+    # --------------------------------------------------
+
+    search_options = {
+        "All Documents": None,
+    }
+
+    for document in documents:
+        search_options[document.filename] = document.document_id
+
     if documents:
 
         for document in documents:
@@ -143,14 +154,36 @@ question = st.text_input(
     "Enter your question"
 )
 
+selected_document = st.selectbox(
+    "Search Scope",
+    options=list(search_options.keys()),
+)
+
+selected_document_id = search_options[selected_document]
+
 if st.button("Ask"):
 
     if question.strip():
 
         with st.spinner("Searching documents..."):
 
-            response = rag.ask(question)
+            response = rag.ask(
+                question,
+                document_id=selected_document_id,
+            )
 
+        if selected_document_id:
+
+            st.caption(
+                f"Searching only in: {selected_document}"
+            )
+
+        else:
+
+            st.caption(
+                "Searching across all indexed documents"
+            )
+        
         st.subheader("Answer")
 
         st.markdown(response.answer)

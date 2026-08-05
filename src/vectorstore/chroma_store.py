@@ -28,37 +28,57 @@ class ChromaVectorStore:
             embedding_function=embedding_model,
         )
 
+    # --------------------------------------------------
+    # Add Documents
+    # --------------------------------------------------
+
     def add_documents(
         self,
         documents: list[Document],
     ) -> None:
-        """
-        Add documents to the vector database.
-        """
 
         self.vectorstore.add_documents(documents)
+
+    # --------------------------------------------------
+    # Similarity Search
+    # --------------------------------------------------
 
     def similarity_search(
         self,
         query: str,
         k: int = 4,
+        document_id: str | None = None,
     ) -> list[Document]:
         """
-        Retrieve the most relevant document chunks.
+        Retrieve relevant document chunks.
+
+        If document_id is provided,
+        search only inside that document.
         """
+
+        if document_id:
+
+            return self.vectorstore.similarity_search(
+                query=query,
+                k=k,
+                filter={
+                    "document_id": document_id,
+                },
+            )
 
         return self.vectorstore.similarity_search(
             query=query,
             k=k,
         )
 
+    # --------------------------------------------------
+    # Delete Document
+    # --------------------------------------------------
+
     def delete_document(
         self,
         document_id: str,
     ) -> None:
-        """
-        Delete every chunk belonging to a document.
-        """
 
         self.vectorstore._collection.delete(
             where={
@@ -66,11 +86,11 @@ class ChromaVectorStore:
             }
         )
 
+    # --------------------------------------------------
+    # Reset Database
+    # --------------------------------------------------
+
     def reset(self) -> None:
-        """
-        Delete the entire Chroma collection.
-        Useful during testing.
-        """
 
         self.vectorstore.delete_collection()
 

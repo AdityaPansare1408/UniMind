@@ -15,30 +15,35 @@ class RAGService:
         self.llm = GeminiLLM()
         self.retriever = Retriever()
 
+    # --------------------------------------------------
+    # Build Context
+    # --------------------------------------------------
+
     def build_context(
         self,
         documents: list[Document],
     ) -> str:
-        """
-        Build a rich context for the LLM including
-        source filename and page number.
-        """
 
         context_parts = []
 
-        for index, document in enumerate(documents, start=1):
+        for index, document in enumerate(
+            documents,
+            start=1,
+        ):
 
             metadata = document.metadata or {}
 
-            source = metadata.get("source", "Unknown")
+            source = metadata.get(
+                "source",
+                "Unknown",
+            )
 
-            # Keep only filename
             source = source.split("\\")[-1].split("/")[-1]
 
             page = metadata.get("page")
 
             if page is not None:
-                page += 1  # LangChain pages start from 0
+                page += 1
 
             context_parts.append(
                 f"""
@@ -54,54 +59,65 @@ Page: {page if page is not None else "Unknown"}
 
         return "\n".join(context_parts)
 
+    # --------------------------------------------------
+    # Prompt
+    # --------------------------------------------------
+
     def build_prompt(
         self,
         question: str,
         context: str,
     ) -> str:
-        """
-        Build final prompt.
-        """
 
         return RAG_PROMPT.format(
             question=question,
             context=context,
         )
 
+    # --------------------------------------------------
+    # Ask
+    # --------------------------------------------------
+
     def ask(
         self,
         question: str,
+        document_id: str | None = None,
         k: int = 4,
     ) -> RAGResponse:
-        """
-        Execute the complete RAG pipeline.
-        """
 
         if not question.strip():
-            raise ValueError("Question cannot be empty.")
+            raise ValueError(
+                "Question cannot be empty."
+            )
 
         documents = self.retriever.retrieve(
             query=question,
             k=k,
+            document_id=document_id,
         )
 
         if not documents:
+
             return RAGResponse(
                 answer=(
                     "I couldn't find any relevant information "
-                    "in the uploaded documents."
+                    "in the selected document(s)."
                 ),
                 documents=[],
             )
 
-        context = self.build_context(documents)
+        context = self.build_context(
+            documents
+        )
 
         prompt = self.build_prompt(
             question=question,
             context=context,
         )
 
-        answer = self.llm.invoke(prompt)
+        answer = self.llm.invoke(
+            prompt
+        )
 
         return RAGResponse(
             answer=answer,
