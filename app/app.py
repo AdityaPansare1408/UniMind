@@ -10,6 +10,7 @@ from src.services.document_service import DocumentService
 from src.services.document_registry import DocumentRegistry
 from src.services.rag_service import RAGService
 from src.ui.document_card import render_document_card
+from src.memory.conversation_memory import ConversationMemory
 
 # --------------------------------------------------
 # Page Configuration
@@ -40,6 +41,13 @@ def get_registry():
 rag = get_rag_service()
 document_service = get_document_service()
 registry = get_registry()
+
+# --------------------------------------------------
+# Conversation Memory
+# --------------------------------------------------
+
+if "memory" not in st.session_state:
+    st.session_state.memory = ConversationMemory()
 
 # --------------------------------------------------
 # Header
@@ -98,6 +106,13 @@ with st.sidebar:
 """)
 
     st.divider()
+
+    if st.button(
+        "🗑 Clear Conversation",
+        use_container_width=True,
+    ):
+        st.session_state.memory.clear()
+        st.success("Conversation cleared.")
 
     # --------------------------------------------------
     # Indexed Documents
@@ -167,8 +182,13 @@ if st.button("Ask"):
 
         with st.spinner("Searching documents..."):
 
+            conversation_history = (
+                st.session_state.memory.build_history()
+            )
+
             response = rag.ask(
-                question,
+                question=question,
+                conversation_history=conversation_history,
                 document_id=selected_document_id,
             )
 
@@ -187,6 +207,11 @@ if st.button("Ask"):
         st.subheader("Answer")
 
         st.markdown(response.answer)
+
+        st.session_state.memory.add_exchange(
+            question,
+            response.answer,
+        )
 
         # --------------------------------------------------
         # Sources

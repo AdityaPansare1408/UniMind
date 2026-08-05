@@ -67,11 +67,31 @@ Page: {page if page is not None else "Unknown"}
         self,
         question: str,
         context: str,
+        conversation_history: str = "",
     ) -> str:
+
+        full_context = ""
+
+        if conversation_history.strip():
+
+            full_context += (
+                "Conversation History\n"
+                "====================\n\n"
+            )
+
+            full_context += conversation_history
+            full_context += "\n\n"
+
+        full_context += (
+            "Retrieved Context\n"
+            "=================\n\n"
+        )
+
+        full_context += context
 
         return RAG_PROMPT.format(
             question=question,
-            context=context,
+            context=full_context,
         )
 
     # --------------------------------------------------
@@ -81,6 +101,7 @@ Page: {page if page is not None else "Unknown"}
     def ask(
         self,
         question: str,
+        conversation_history: str = "",
         document_id: str | None = None,
         k: int = 4,
     ) -> RAGResponse:
@@ -113,6 +134,7 @@ Page: {page if page is not None else "Unknown"}
         prompt = self.build_prompt(
             question=question,
             context=context,
+            conversation_history=conversation_history,
         )
 
         answer = self.llm.invoke(
